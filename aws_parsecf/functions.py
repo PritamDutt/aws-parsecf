@@ -136,6 +136,11 @@ class Functions:
         'UNKNOWN ATT: SomeResource.SomeKey'
         """
 
+        if len(value) != 2:
+            # the given value list must be an array with 2 values
+            # if not, just return what is given
+            return ".".join(value)
+
         resource_name, key = value
         if resource_name in self.root.get('Resources', ()):
             resource = self.parser.exploded(self.root['Resources'], resource_name)
