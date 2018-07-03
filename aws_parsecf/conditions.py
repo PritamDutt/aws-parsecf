@@ -15,7 +15,9 @@ class Conditions:
             }
 
     def evaluate(self, condition):
-        if isinstance(condition, str):
+        # added 'unicode' type checking
+        # by Alex Ough on July 2nd 2018
+        if isinstance(condition, str) or isinstance(condition, unicode):
             # condition name
             condition = self.parser.exploded(self.root['Conditions'], condition)
         if isinstance(condition, bool):
@@ -125,4 +127,3 @@ class Conditions:
         """
 
         return any(self.evaluate(condition) for condition in value)
-

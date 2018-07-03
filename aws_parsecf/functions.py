@@ -35,7 +35,9 @@ class Functions:
         ...     ).fn_base64('hello'))
         'aGVsbG8='
         """
-        if isinstance(value, str):
+        # added 'unicode' type checking
+        # by Alex Ough on July 2nd 2018
+        if isinstance(value, str) or isinstance(value, unicode):
             value = value.encode()
         return base64.b64encode(value).decode()
 
@@ -165,6 +167,17 @@ class Functions:
         """
 
         # NOTE: If you change this function, please run the tests with FULL=true environment variable!
+
+        """
+        # in case of the given 'value' is 'AWS::Region' like below
+            AvailabilityZones": {
+              "Fn::GetAZs": "AWS::Region"
+            }
+        # by Alex Ough on July 2nd 2018
+        """
+        if value == 'AWS::Region':
+            value = self.default_region
+
         return [
                 zone['ZoneName'] for zone in
                 boto3.client('ec2', region_name=value or self.default_region).describe_availability_zones()['AvailabilityZones']
@@ -354,11 +367,15 @@ class Functions:
         # resource logical id?
         if value in self.root.get('Resources', ()):
             resource = self.parser.exploded(self.root['Resources'], value)
-            name_type = Functions.REF_RESOURCE_TYPE_PATTERN.match(resource['Type'])
-            if name_type:
-                name = resource.get('Properties', {}).get("{}Name".format(name_type.group(1)))
-                if name:
-                    return name
+            # if the resource has been 'DELETED', don't process it
+            # because the deleted resource does NOT have any attrbutes including 'Type'
+            # by Alex Ough on July 2nd 2018
+            if resource != DELETE:
+                name_type = Functions.REF_RESOURCE_TYPE_PATTERN.match(resource['Type'])
+                if name_type:
+                    name = resource.get('Properties', {}).get("{}Name".format(name_type.group(1)))
+                    if name:
+                        return name
 
         return UnknownValue("REF: {}".format(value))
 
@@ -401,4 +418,3 @@ class Functions:
     }
 
     REF_RESOURCE_TYPE_PATTERN = re.compile(r"^.+::(.+?)$")
-
