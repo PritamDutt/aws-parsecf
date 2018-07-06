@@ -17,7 +17,7 @@ class Conditions:
     def evaluate(self, condition):
         # added 'unicode' type checking
         # by Alex Ough on July 2nd 2018
-        if isinstance(condition, str) or isinstance(condition, unicode):
+        if isinstance(condition, basestring):
             # condition name
             condition = self.parser.exploded(self.root['Conditions'], condition)
         if isinstance(condition, bool):

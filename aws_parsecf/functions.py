@@ -37,7 +37,7 @@ class Functions:
         """
         # added 'unicode' type checking
         # by Alex Ough on July 2nd 2018
-        if isinstance(value, str) or isinstance(value, unicode):
+        if isinstance(value, basestring):
             value = value.encode()
         return base64.b64encode(value).decode()
 
@@ -372,10 +372,10 @@ class Functions:
         # resource logical id?
         if value in self.root.get('Resources', ()):
             resource = self.parser.exploded(self.root['Resources'], value)
-            # if the resource has been 'DELETED', don't process it
+            # if the resource doesn't have 'Type' attribute like being converted to DELETE, don't process it
             # because the deleted resource does NOT have any attrbutes including 'Type'
             # by Alex Ough on July 2nd 2018
-            if resource != DELETE:
+            if 'Type' in resource:
                 name_type = Functions.REF_RESOURCE_TYPE_PATTERN.match(resource['Type'])
                 if name_type:
                     name = resource.get('Properties', {}).get("{}Name".format(name_type.group(1)))
