@@ -37,7 +37,7 @@ class Functions:
         """
         # added 'unicode' type checking
         # by Alex Ough on July 2nd 2018
-        if isinstance(value, basestring):
+        if isinstance(value, str):
             value = value.encode()
         return base64.b64encode(value).decode()
 

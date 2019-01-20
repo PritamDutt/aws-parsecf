@@ -21,7 +21,7 @@ class Parser:
             condition_name = current.get('Condition')
             # added 'unicode' type checking
             # by Alex Ough on July 2nd 2018
-            if condition_name and isinstance(condition_name, basestring):
+            if condition_name and isinstance(condition_name, str):
                 # condition
                 if not self.conditions.evaluate(condition_name):
                     return DELETE
