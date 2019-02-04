@@ -2,6 +2,7 @@ from aws_parsecf.common import DELETE, UnknownValue
 import base64
 import boto3
 import re
+from pprint import pprint as pp
 
 class Functions:
     def __init__(self, parser, root, default_region, parameters={}):
@@ -204,9 +205,8 @@ class Functions:
         ...     ).fn_join([':', ['a', 'b', 'c']])
         'a:b:c'
         """
-
         delimeter, values = value
-        return delimeter.join(values)
+        return delimeter.join(str(x) for x in values)
 
     def fn_select(self, value):
         """
@@ -268,7 +268,7 @@ class Functions:
         ...     ).fn_sub('hello ${!SomeResource.SomeKey}')
         'hello ${SomeResource.SomeKey}'
         """
-
+        print(f"value={value}")
         if isinstance(value, list):
             value, variables = value
         else:
@@ -276,6 +276,8 @@ class Functions:
             value, variables = value, {}
 
         for name, target in variables.items():
+            # print(f"name={name}")
+            # print(f"target={target}")
             value = value.replace('${{{}}}'.format(name), target)
 
         return Functions.SUB_VARIABLE_PATTERN.sub(self._sub_variable, value)
