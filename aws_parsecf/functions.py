@@ -276,6 +276,7 @@ class Functions:
             value, variables = value, {}
 
         for name, target in variables.items():
+            if name == "_exploded": continue
             # print(f"name={name}")
             # print(f"target={target}")
             value = value.replace('${{{}}}'.format(name), target)
