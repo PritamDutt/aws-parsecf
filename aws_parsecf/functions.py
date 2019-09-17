@@ -216,6 +216,7 @@ class Functions:
         ...     ).fn_select(['1', ['a', 'b', 'c', 'd', 'e']])
         'b'
         """
+
         index, values = value
         return values[int(index)]
 
@@ -227,6 +228,7 @@ class Functions:
         ...     ).fn_split(['|', 'a|b|c'])
         ['a', 'b', 'c']
         """
+
         delimeter, value = value
         return value.split(delimeter)
 
@@ -266,42 +268,20 @@ class Functions:
         ...     ).fn_sub('hello ${!SomeResource.SomeKey}')
         'hello ${SomeResource.SomeKey}'
         """
+        print(f"value={value}")
         if isinstance(value, list):
-            vars = re.findall(r'\$\{(.*?)}', value[0])
-            if vars:
-                variables = {}
-                for v in vars:
-                    if self.root['Parameters'].get(v):
-                        if self.parameters.get(v):
-                            variables[v] = self.parameters[v]
-                        else:
-                            DefaultParam = self.root["Parameters"][v].get("Default")
-                            if DefaultParam:
-                                variables[v] = DefaultParam
-                    elif v in value[1].keys():
-                        variables[v] = value[1][v]
-                        del value[1][v]
-                TemplateURL = value[0]
-                for name, target in variables.items():
-                    if name == "_exploded": continue
-                    TemplateURL = TemplateURL.replace('${{{}}}'.format(name), target)
-                response = Functions.SUB_VARIABLE_PATTERN.sub(self._sub_variable, TemplateURL)
-                value[0] = response
-                if "_exploded" in value[1].keys():
-                    del value[1]["_exploded"]
-                return value[0]
-            else:
-                value, variables = value
-
+            value, variables = value
         else:
             # only template parameter names, resource logical IDs, and resource attributes, will be parsed
             value, variables = value, {}
 
         for name, target in variables.items():
             if name == "_exploded": continue
+            # print(f"name={name}")
+            # print(f"target={target}")
             value = value.replace('${{{}}}'.format(name), target)
-        resp = Functions.SUB_VARIABLE_PATTERN.sub(self._sub_variable, value)
-        return resp
+
+        return Functions.SUB_VARIABLE_PATTERN.sub(self._sub_variable, value)
 
     def ref(self, value):
         """
@@ -379,6 +359,8 @@ class Functions:
         ...     ).ref('SomeValue')
         'UNKNOWN REF: SomeValue'
         """
+
+        # pseudo function?
         function = Functions.REF_PSEUDO_FUNCTIONS.get(value)
         if function:
             return function(self)
@@ -390,7 +372,6 @@ class Functions:
             if 'Default' in parameter:
                 return parameter['Default']
             return UnknownValue("REF: {}".format(value))
-
         # resource logical id?
         if value in self.root.get('Resources', ()):
             resource = self.parser.exploded(self.root['Resources'], value)
@@ -403,8 +384,8 @@ class Functions:
                     name = resource.get('Properties', {}).get("{}Name".format(name_type.group(1)))
                     if name:
                         return name
-        return "${" + value + "}"
-        # return UnknownValue("REF: {}".format(value))
+
+        return UnknownValue("REF: {}".format(value))
 
     def _find_att(self, current, key):
         if isinstance(current, dict):
@@ -433,14 +414,11 @@ class Functions:
     def _sub_variable(self, match):
         variable = match.group(1)
         if variable.startswith('!'):
-            response = "${{{}}}".format(variable[1:])
-            return response
+            return "${{{}}}".format(variable[1:])
         elif '.' in variable:
-            response = self.fn_get_att(variable.split('.'))
-            return response
+            return self.fn_get_att(variable.split('.'))
         else:
-            response = self.ref(variable)
-            return response
+            return self.ref(variable)
 
     REF_PSEUDO_FUNCTIONS = {
         'AWS::NoValue': lambda self: DELETE,
