@@ -2,6 +2,7 @@ from aws_parsecf.common import DELETE, UnknownValue
 import base64
 import boto3
 import re
+from pprint import pprint as pp
 
 class Functions:
     def __init__(self, parser, root, default_region, parameters={}):
@@ -37,7 +38,7 @@ class Functions:
         """
         # added 'unicode' type checking
         # by Alex Ough on July 2nd 2018
-        if isinstance(value, basestring):
+        if isinstance(value, str):
             value = value.encode()
         return base64.b64encode(value).decode()
 
@@ -204,9 +205,10 @@ class Functions:
         ...     ).fn_join([':', ['a', 'b', 'c']])
         'a:b:c'
         """
-
         delimeter, values = value
-        return delimeter.join(values)
+        if "," in values:
+            return values.split(",")
+        return delimeter.join(str(x) for x in values)
 
     def fn_select(self, value):
         """
@@ -216,7 +218,6 @@ class Functions:
         ...     ).fn_select(['1', ['a', 'b', 'c', 'd', 'e']])
         'b'
         """
-
         index, values = value
         return values[int(index)]
 
@@ -228,7 +229,6 @@ class Functions:
         ...     ).fn_split(['|', 'a|b|c'])
         ['a', 'b', 'c']
         """
-
         delimeter, value = value
         return value.split(delimeter)
 
@@ -268,17 +268,42 @@ class Functions:
         ...     ).fn_sub('hello ${!SomeResource.SomeKey}')
         'hello ${SomeResource.SomeKey}'
         """
-
         if isinstance(value, list):
-            value, variables = value
+            vars = re.findall(r'\$\{(.*?)}', value[0])
+            if vars:
+                variables = {}
+                for v in vars:
+                    if self.root['Parameters'].get(v):
+                        if self.parameters.get(v):
+                            variables[v] = self.parameters[v]
+                        else:
+                            DefaultParam = self.root["Parameters"][v].get("Default")
+                            if DefaultParam:
+                                variables[v] = DefaultParam
+                    elif v in value[1].keys():
+                        variables[v] = value[1][v]
+                        del value[1][v]
+                TemplateURL = value[0]
+                for name, target in variables.items():
+                    if name == "_exploded": continue
+                    TemplateURL = TemplateURL.replace('${{{}}}'.format(name), target)
+                response = Functions.SUB_VARIABLE_PATTERN.sub(self._sub_variable, TemplateURL)
+                value[0] = response
+                if "_exploded" in value[1].keys():
+                    del value[1]["_exploded"]
+                return value[0]
+            else:
+                value, variables = value
+
         else:
             # only template parameter names, resource logical IDs, and resource attributes, will be parsed
             value, variables = value, {}
 
         for name, target in variables.items():
+            if name == "_exploded": continue
             value = value.replace('${{{}}}'.format(name), target)
-
-        return Functions.SUB_VARIABLE_PATTERN.sub(self._sub_variable, value)
+        resp = Functions.SUB_VARIABLE_PATTERN.sub(self._sub_variable, value)
+        return resp
 
     def ref(self, value):
         """
@@ -356,8 +381,6 @@ class Functions:
         ...     ).ref('SomeValue')
         'UNKNOWN REF: SomeValue'
         """
-
-        # pseudo function?
         function = Functions.REF_PSEUDO_FUNCTIONS.get(value)
         if function:
             return function(self)
@@ -369,6 +392,7 @@ class Functions:
             if 'Default' in parameter:
                 return parameter['Default']
             return UnknownValue("REF: {}".format(value))
+
         # resource logical id?
         if value in self.root.get('Resources', ()):
             resource = self.parser.exploded(self.root['Resources'], value)
@@ -381,8 +405,8 @@ class Functions:
                     name = resource.get('Properties', {}).get("{}Name".format(name_type.group(1)))
                     if name:
                         return name
-
-        return UnknownValue("REF: {}".format(value))
+        return "${" + value + "}"
+        # return UnknownValue("REF: {}".format(value))
 
     def _find_att(self, current, key):
         if isinstance(current, dict):
@@ -411,11 +435,14 @@ class Functions:
     def _sub_variable(self, match):
         variable = match.group(1)
         if variable.startswith('!'):
-            return "${{{}}}".format(variable[1:])
+            response = "${{{}}}".format(variable[1:])
+            return response
         elif '.' in variable:
-            return self.fn_get_att(variable.split('.'))
+            response = self.fn_get_att(variable.split('.'))
+            return response
         else:
-            return self.ref(variable)
+            response = self.ref(variable)
+            return response
 
     REF_PSEUDO_FUNCTIONS = {
         'AWS::NoValue': lambda self: DELETE,
