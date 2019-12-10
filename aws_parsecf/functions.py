@@ -268,7 +268,7 @@ class Functions:
         ...     ).fn_sub('hello ${!SomeResource.SomeKey}')
         'hello ${SomeResource.SomeKey}'
         """
-        print(f"value={value}")
+        #print(f"value={value}")
         if isinstance(value, list):
             value, variables = value
         else:
