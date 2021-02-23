@@ -2,6 +2,7 @@ from aws_parsecf.common import DELETE
 from aws_parsecf.conditions import Conditions
 from aws_parsecf.functions import Functions
 
+
 class Parser:
     def __init__(self, root, default_region, parameters={}):
         self.functions = Functions(self, root, default_region, parameters)
@@ -25,7 +26,7 @@ class Parser:
                 # condition
                 if not self.conditions.evaluate(condition_name):
                     return DELETE
-            elif len(current) == 2: # including '_exploded'
+            elif len(current) == 2:  # including '_exploded'
                 # possibly a condition
                 key, value = next((key, value) for key, value in current.items() if key != '_exploded')
                 try:
@@ -34,7 +35,7 @@ class Parser:
                     if e.args != (key,):
                         raise
                     # not an intrinsic function
-                if key != 'Condition': # 'Condition' means a name of a condtion, would make a mess
+                if key != 'Condition':  # 'Condition' means a name of a condtion, would make a mess
                     try:
                         return self.conditions.evaluate({key: value})
                     except KeyError as e:
@@ -48,34 +49,32 @@ class Parser:
 
     def cleanup(self, current):
         if isinstance(current, dict):
-            if '_exploded' in current:
-                del current['_exploded']
-            for key, value in list(current.items()):
-                if value is DELETE:
-                    del current[key]
-                else:
-                    self.cleanup(value)
+            self._cleanup_dict(current)
         elif isinstance(current, list):
             deleted = 0
-            for index, value in enumerate(list(current)):
-                if value is DELETE:
-                    del current[index - deleted]
-                    deleted += 1
-                else:
-                    self.cleanup(value)
+            self._cleanup_list(current, deleted)
+
+    def _cleanup_dict(self, current):
+        if '_exploded' in current:
+            del current['_exploded']
+        for key, value in list(current.items()):
+            if value is DELETE:
+                del current[key]
+            else:
+                self.cleanup(value)
+
+    def _cleanup_list(self, current, deleted):
+        for index, value in enumerate(list(current)):
+            if value is DELETE:
+                del current[index - deleted]
+                deleted += 1
+            else:
+                self.cleanup(value)
 
     def exploded(self, collection, key):
         if collection[key] is None:
             return None
         exploded = self.explode(collection[key])
-        if exploded is DELETE:
-            # add 'DELETE' attribute with True value
-            # instead of overwriting its attributes with "DELETE"
-            # to preserve its attributes
-            # by Alex Ough on July 2nd 2018
-            value = collection[key]
-            value['DELETE'] = True
-            collection[key] = value
-        elif exploded is not None:
+        if exploded is not None:
             collection[key] = exploded
         return collection[key]

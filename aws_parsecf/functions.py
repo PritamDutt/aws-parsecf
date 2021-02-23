@@ -5,7 +5,9 @@ import re
 from pprint import pprint as pp
 
 class Functions:
-    def __init__(self, parser, root, default_region, parameters={}):
+    def __init__(self, parser, root, default_region, parameters=None):
+        if parameters is None:
+            parameters = {}
         self.parser = parser
         self.root = root
         self.default_region = default_region
@@ -166,10 +168,10 @@ class Functions:
         ...         'us-east-1'
         ...         ).fn_get_azs('us-west-1')
         ... else:
-        ...     print(['us-east-1a', 'us-east-1b', 'us-east-1c', 'us-east-1d', 'us-east-1e'])
-        ...     print(['us-west-1a', 'us-west-1c'])
-        ['us-east-1a', 'us-east-1b', 'us-east-1c', 'us-east-1d', 'us-east-1e']
-        ['us-west-1a', 'us-west-1c']
+        ...     print(['us-east-1a', 'us-east-1b', 'us-east-1c', 'us-east-1d', 'us-east-1e', 'us-east-1f'])
+        ...     print(['us-west-1b', 'us-west-1c'])
+        ['us-east-1a', 'us-east-1b', 'us-east-1c', 'us-east-1d', 'us-east-1e', 'us-east-1f']
+        ['us-west-1b', 'us-west-1c']
         """
 
         # NOTE: If you change this function, please run the tests with FULL=true environment variable!
@@ -286,8 +288,6 @@ class Functions:
 
         for name, target in variables.items():
             if name == "_exploded": continue
-            # print(f"name={name}")
-            # print(f"target={target}")
             value = value.replace('${{{}}}'.format(name), target)
 
         return Functions.SUB_VARIABLE_PATTERN.sub(self._sub_variable, value)

@@ -1,5 +1,6 @@
 from aws_parsecf.common import DELETE
 
+
 class Conditions:
     def __init__(self, parser, root, default_region):
         self.parser = parser
@@ -7,12 +8,12 @@ class Conditions:
         self.default_region = default_region
 
     MAP = {
-            'Condition': 'evaluate',
-            'Fn::And': 'fn_and',
-            'Fn::Equals': 'fn_equals',
-            'Fn::Not': 'fn_not',
-            'Fn::Or': 'fn_or',
-            }
+        'Condition': 'evaluate',
+        'Fn::And': 'fn_and',
+        'Fn::Equals': 'fn_equals',
+        'Fn::Not': 'fn_not',
+        'Fn::Or': 'fn_or',
+    }
 
     def evaluate(self, condition):
         # added 'unicode' type checking

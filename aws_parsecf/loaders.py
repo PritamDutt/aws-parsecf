@@ -1,16 +1,22 @@
-from aws_parsecf.parser import Parser
-import boto3
 import json
+
+import boto3
 import yaml
+
+from aws_parsecf.parser import Parser
+
 
 def load_json(stream, default_region=boto3.Session().region_name, parameters={}):
     return _load(json.load(stream), default_region, parameters)
 
+
 def loads_json(string, default_region=boto3.Session().region_name, parameters={}):
     return _load(json.loads(string), default_region, parameters)
 
+
 def load_yaml(stream_or_string, default_region=boto3.Session().region_name, parameters={}):
-    return _load(yaml.load(stream_or_string), default_region, parameters)
+    return _load(yaml.safe_load(stream_or_string), default_region, parameters)
+
 
 def _load(root, default_region, parameters={}):
     """
@@ -61,9 +67,9 @@ def _load(root, default_region, parameters={}):
     """
 
     if not default_region:
-        raise TypeError("No default region in aws configuration, please specify one (with `aws configure` or `default_region=`)")
+        raise TypeError(
+            "No default region in aws configuration, please specify one (with `aws configure` or `default_region=`)")
     parser = Parser(root, default_region, parameters)
     parser.explode(root)
     parser.cleanup(root)
     return root
-
