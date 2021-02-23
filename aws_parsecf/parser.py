@@ -19,6 +19,8 @@ class Parser:
                 self.exploded(current, key)
 
             condition_name = current.get('Condition')
+            # added 'unicode' type checking
+            # by Alex Ough on July 2nd 2018
             if condition_name and isinstance(condition_name, str):
                 # condition
                 if not self.conditions.evaluate(condition_name):
@@ -66,7 +68,14 @@ class Parser:
         if collection[key] is None:
             return None
         exploded = self.explode(collection[key])
-        if exploded is not None:
+        if exploded is DELETE:
+            # add 'DELETE' attribute with True value
+            # instead of overwriting its attributes with "DELETE"
+            # to preserve its attributes
+            # by Alex Ough on July 2nd 2018
+            value = collection[key]
+            value['DELETE'] = True
+            collection[key] = value
+        elif exploded is not None:
             collection[key] = exploded
         return collection[key]
-

@@ -2,6 +2,7 @@ from aws_parsecf.common import DELETE, UnknownValue
 import base64
 import boto3
 import re
+from pprint import pprint as pp
 
 class Functions:
     def __init__(self, parser, root, default_region, parameters={}):
@@ -35,6 +36,8 @@ class Functions:
         ...     ).fn_base64('hello'))
         'aGVsbG8='
         """
+        # added 'unicode' type checking
+        # by Alex Ough on July 2nd 2018
         if isinstance(value, str):
             value = value.encode()
         return base64.b64encode(value).decode()
@@ -134,6 +137,11 @@ class Functions:
         'UNKNOWN ATT: SomeResource.SomeKey'
         """
 
+        if len(value) != 2:
+            # the given value list must be an array with 2 values
+            # if not, just return what is given
+            return ".".join(value)
+
         resource_name, key = value
         if resource_name in self.root.get('Resources', ()):
             resource = self.parser.exploded(self.root['Resources'], resource_name)
@@ -165,6 +173,17 @@ class Functions:
         """
 
         # NOTE: If you change this function, please run the tests with FULL=true environment variable!
+
+        """
+        # in case of the given 'value' is 'AWS::Region' like below
+            AvailabilityZones": {
+              "Fn::GetAZs": "AWS::Region"
+            }
+        # by Alex Ough on July 2nd 2018
+        """
+        if value == 'AWS::Region':
+            value = self.default_region
+
         return [
                 zone['ZoneName'] for zone in
                 boto3.client('ec2', region_name=value or self.default_region).describe_availability_zones()['AvailabilityZones']
@@ -186,9 +205,8 @@ class Functions:
         ...     ).fn_join([':', ['a', 'b', 'c']])
         'a:b:c'
         """
-
         delimeter, values = value
-        return delimeter.join(values)
+        return delimeter.join(str(x) for x in values)
 
     def fn_select(self, value):
         """
@@ -250,7 +268,7 @@ class Functions:
         ...     ).fn_sub('hello ${!SomeResource.SomeKey}')
         'hello ${SomeResource.SomeKey}'
         """
-
+        #print(f"value={value}")
         if isinstance(value, list):
             value, variables = value
         else:
@@ -258,6 +276,9 @@ class Functions:
             value, variables = value, {}
 
         for name, target in variables.items():
+            if name == "_exploded": continue
+            # print(f"name={name}")
+            # print(f"target={target}")
             value = value.replace('${{{}}}'.format(name), target)
 
         return Functions.SUB_VARIABLE_PATTERN.sub(self._sub_variable, value)
@@ -354,11 +375,15 @@ class Functions:
         # resource logical id?
         if value in self.root.get('Resources', ()):
             resource = self.parser.exploded(self.root['Resources'], value)
-            name_type = Functions.REF_RESOURCE_TYPE_PATTERN.match(resource['Type'])
-            if name_type:
-                name = resource.get('Properties', {}).get("{}Name".format(name_type.group(1)))
-                if name:
-                    return name
+            # if the resource doesn't have 'Type' attribute like being converted to DELETE, don't process it
+            # because the deleted resource does NOT have any attrbutes including 'Type'
+            # by Alex Ough on July 2nd 2018
+            if 'Type' in resource:
+                name_type = Functions.REF_RESOURCE_TYPE_PATTERN.match(resource['Type'])
+                if name_type:
+                    name = resource.get('Properties', {}).get("{}Name".format(name_type.group(1)))
+                    if name:
+                        return name
 
         return UnknownValue("REF: {}".format(value))
 
@@ -401,4 +426,3 @@ class Functions:
     }
 
     REF_RESOURCE_TYPE_PATTERN = re.compile(r"^.+::(.+?)$")
-
