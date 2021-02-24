@@ -1,8 +1,10 @@
-from aws_parsecf.common import DELETE, UnknownValue
 import base64
-import boto3
 import re
-from pprint import pprint as pp
+
+import boto3
+
+from aws_parsecf.common import DELETE, UnknownValue
+
 
 class Functions:
     def __init__(self, parser, root, default_region, parameters=None):
@@ -187,16 +189,17 @@ class Functions:
             value = self.default_region
 
         return [
-                zone['ZoneName'] for zone in
-                boto3.client('ec2', region_name=value or self.default_region).describe_availability_zones()['AvailabilityZones']
-                ]
+            zone['ZoneName'] for zone in
+            boto3.client('ec2', region_name=value or self.default_region).describe_availability_zones()[
+                'AvailabilityZones']
+        ]
 
     def fn_import_value(self, value):
         if not hasattr(self, '_import_value_cache'):
             self._import_value_cache = dict(
-                    (export['Name'], export['Value']) for export in
-                    boto3.client('cloudformation', region_name=self.default_region).list_exports()['Exports']
-                    )
+                (export['Name'], export['Value']) for export in
+                boto3.client('cloudformation', region_name=self.default_region).list_exports()['Exports']
+            )
         return self._import_value_cache.get(value, UnknownValue("IMPORT VALUE: {}".format(value)))
 
     def fn_join(self, value):
@@ -279,7 +282,7 @@ class Functions:
         ...     ).fn_sub('hello ${!SomeResource.SomeKey}')
         'hello ${SomeResource.SomeKey}'
         """
-        #print(f"value={value}")
+        # print(f"value={value}")
         if isinstance(value, list):
             value, variables = value
         else:
@@ -311,7 +314,8 @@ class Functions:
         DELETE
 
         >>> root = {'Resources':
-        ...             {'SomeFunction': {'Type': 'AWS::Lambda::Function', 'Properties': {'FunctionName': 'SomeFunctionName'}}},
+        ...             {'SomeFunction': {'Type': 'AWS::Lambda::Function',
+        ...                 'Properties': {'FunctionName': 'SomeFunctionName'}}},
         ...         'Ref': 'SomeFunction'}
         >>> Functions(Parser(root, 'us-east-1'),
         ...     root,
@@ -420,6 +424,7 @@ class Functions:
         raise KeyError(key)
 
     SUB_VARIABLE_PATTERN = re.compile(r"\${(.+?)}")
+
     def _sub_variable(self, match):
         variable = match.group(1)
         if variable.startswith('!'):
